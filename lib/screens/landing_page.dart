@@ -27,13 +27,14 @@ class _BackgroundImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      left: -328,
+      // Mantendo suas coordenadas originais
+      left: 0,
       top: 0,
       child: SizedBox(
-        width: 730,
-        height: 547,
-        child: Image.network(
-          'https://picsum.photos/730/547',
+        width: 500,
+        height: 500,
+        child: Image.asset(
+          'assets/images/image 1.png', // Ajustado para asset local
           fit: BoxFit.cover,
           errorBuilder: (context, error, stackTrace) =>
               Container(color: Colors.grey[800]),
@@ -49,32 +50,22 @@ class _DarkGradientOverlay extends StatelessWidget {
     return Positioned(
       left: 0,
       right: 0,
-      top: 469,
+      top: 470, // começa junto com a imagem de background
       child: Container(
-        height: 405,
-        decoration: ShapeDecoration(
-          gradient: const LinearGradient(
+        height: 500, // mesma altura da imagem de background
+        decoration: const BoxDecoration(
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(30),   // ajuste o valor conforme quiser
+            topRight: Radius.circular(30),
+          ),
+          gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0x19787878),
-              Color(0xFF454545),
-              Color(0xFF121212),
+              Color(0xCC121212), // meio opaco 80%
+              Color(0xFF121212), // base totalmente sólida
             ],
           ),
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(8),
-              topRight: Radius.circular(10),
-            ),
-          ),
-          shadows: const [
-            BoxShadow(
-              color: Color(0x4C000000),
-              blurRadius: 4,
-              offset: Offset(1, 1),
-            ),
-          ],
         ),
       ),
     );
@@ -92,8 +83,8 @@ class _AlbumCoverImage extends StatelessWidget {
       child: SizedBox(
         width: 277,
         height: 415,
-        child: Image.network(
-          'https://picsum.photos/277/415',
+        child: Image.asset(
+          'assets/images/image 2.png', // Alterado de network para asset
           fit: BoxFit.cover,
           errorBuilder: (context, error, stackTrace) =>
               Container(color: Colors.grey[700]),
@@ -110,7 +101,7 @@ class _BottomContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return Positioned(
       left: 0,
-      top: 504,
+      top: 550,
       right: 0,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 45),
@@ -216,5 +207,5 @@ class _CTAButton extends StatelessWidget {
         ),
       ),
     );
-  } //
+  }
 }

@@ -90,4 +90,7 @@ flutter:
   fonts:
    - family: BebasNeue
      fonts:
-        - asset: assets/fonts/BebasNeue-Regular.ttf 
+        - asset: assets/fonts/BebasNeue-Regular.ttf
+
+  assets:
+    - assets/images/

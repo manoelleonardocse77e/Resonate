@@ -168,7 +168,7 @@ class _BottomSection extends StatelessWidget {
             screenW: screenW,
             fontScale: fontScale,
             onPressed: () {
-              // TODO: navegar para home
+              Navigator.pushNamed(context, '/home');
             },
           ),
           SizedBox(height: screenH * 0.025),

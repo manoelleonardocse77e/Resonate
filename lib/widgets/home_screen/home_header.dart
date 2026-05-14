@@ -16,7 +16,9 @@ class HomeHeader extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
-            onPressed: () {},
+            onPressed: () {
+              Scaffold.of(context).openDrawer();
+            },
             icon: const Icon(Icons.menu, color: AppColors.white, size: 26),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),

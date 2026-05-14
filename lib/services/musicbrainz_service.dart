@@ -9,69 +9,105 @@ class MusicBrainzService {
     'Accept': 'application/json',
   };
 
-  // ─── Lançamentos da semana (sexta a sexta) ────────────────────────────────
+// ─── Lançamentos da semana (última sexta até hoje) ────────────────────────
 
-  static Future<List<Album>> fetchWeekReleases() async {
-    try {
-      final now = DateTime.now();
+static Future<List<Album>> fetchWeekReleases() async {
+  try {
+    final now = DateTime.now();
 
-      // Acha a sexta-feira anterior (ou hoje se for sexta)
-      final daysFromFriday = (now.weekday - DateTime.friday) % 7;
-      final lastFriday = now.subtract(Duration(days: daysFromFriday));
+    // Última sexta-feira
+    final daysFromFriday = (now.weekday - DateTime.friday) % 7;
+    final lastFriday = now.subtract(Duration(days: daysFromFriday));
 
-      // Próxima sexta-feira
-      final nextFriday = lastFriday.add(const Duration(days: 7));
+    final from = _formatDate(lastFriday); // última sexta
+    final to = _formatDate(now);          // hoje
 
-      final from = _formatDate(lastFriday);
-      final to = _formatDate(nextFriday);
+    final uri = Uri.parse(
+      '$_baseUrl/release-group'
+      '?query=firstreleasedate:[$from TO $to] AND primarytype:Album'
+      '&limit=10'
+      '&fmt=json',
+    );
 
-      final uri = Uri.parse(
-        '$_baseUrl/release-group'
-        '?query=firstreleasedate:[$from TO $to] AND primarytype:Album'
-        '&limit=10'
-        '&fmt=json',
-      );
+    final response = await http.get(uri, headers: _headers);
+    if (response.statusCode != 200) return [];
 
-      final response = await http.get(uri, headers: _headers);
-      if (response.statusCode != 200) return [];
+    final data = jsonDecode(response.body);
+    final groups = data['release-groups'] as List? ?? [];
 
-      final data = jsonDecode(response.body);
-      final groups = data['release-groups'] as List? ?? [];
-
-      return groups.map((g) => _mapAlbum(g)).toList();
-    } catch (_) {
-      return [];
-    }
+    return groups.map((g) => _mapAlbum(g)).toList();
+  } catch (_) {
+    return [];
   }
+}
 
-  // ─── Próximos lançamentos (por data futura) ───────────────────────────────
+// ─── Singles da semana ─────────────────────────────────────────────
 
-  static Future<List<Album>> fetchUpcomingReleases() async {
-    try {
-      final now = DateTime.now();
-      final future = now.add(const Duration(days: 90));
+static Future<List<Album>> fetchWeekSingles() async {
+  try {
+    final now = DateTime.now();
 
-      final from = _formatDate(now);
-      final to = _formatDate(future);
+    final daysFromFriday =
+        (now.weekday - DateTime.friday) % 7;
 
-      final uri = Uri.parse(
-        '$_baseUrl/release-group'
-        '?query=firstreleasedate:[$from TO $to] AND primarytype:Album'
-        '&limit=10'
-        '&fmt=json',
-      );
+    final lastFriday =
+        now.subtract(Duration(days: daysFromFriday));
 
-      final response = await http.get(uri, headers: _headers);
-      if (response.statusCode != 200) return [];
+    final from = _formatDate(lastFriday);
+    final to = _formatDate(now);
 
-      final data = jsonDecode(response.body);
-      final groups = data['release-groups'] as List? ?? [];
+    final uri = Uri.parse(
+      '$_baseUrl/release-group'
+      '?query=firstreleasedate:[$from TO $to] AND primarytype:Single'
+      '&limit=10'
+      '&fmt=json',
+    );
 
-      return groups.map((g) => _mapAlbum(g)).toList();
-    } catch (_) {
-      return [];
-    }
+    final response =
+        await http.get(uri, headers: _headers);
+
+    if (response.statusCode != 200) return [];
+
+    final data = jsonDecode(response.body);
+
+    final groups =
+        data['release-groups'] as List? ?? [];
+
+    return groups.map((g) => _mapAlbum(g)).toList();
+  } catch (_) {
+    return [];
   }
+}
+
+// ─── Próximos lançamentos (amanhã em diante) ──────────────────────────────
+
+static Future<List<Album>> fetchUpcomingReleases() async {
+  try {
+    final now = DateTime.now();
+    final tomorrow = now.add(const Duration(days: 1));
+    final future = now.add(const Duration(days: 90));
+
+    final from = _formatDate(tomorrow); // amanhã
+    final to = _formatDate(future);     // 90 dias no futuro
+
+    final uri = Uri.parse(
+      '$_baseUrl/release-group'
+      '?query=firstreleasedate:[$from TO $to] AND primarytype:Album'
+      '&limit=10'
+      '&fmt=json',
+    );
+
+    final response = await http.get(uri, headers: _headers);
+    if (response.statusCode != 200) return [];
+
+    final data = jsonDecode(response.body);
+    final groups = data['release-groups'] as List? ?? [];
+
+    return groups.map((g) => _mapAlbum(g)).toList();
+  } catch (_) {
+    return [];
+  }
+}
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
 

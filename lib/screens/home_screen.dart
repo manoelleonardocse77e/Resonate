@@ -8,6 +8,7 @@ import '../widgets/home_screen/section_header.dart';
 import '../widgets/home_screen/album_carousel.dart';
 import '../widgets/home_screen/placeholder_carousel.dart';
 import '../widgets/home_screen/placeholder_list.dart';
+import '../widgets/home_screen/side_menu.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,8 +19,10 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   List<Album> _weekReleases = [];
+  List<Album> _weekSingles = [];
   List<Album> _upcomingReleases = [];
   bool _loading = true;
+  bool _showingSingles = false;
 
   @override
   void initState() {
@@ -29,9 +32,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadData() async {
     final week = await MusicBrainzService.fetchWeekReleases();
+    final singles = await MusicBrainzService.fetchWeekSingles();
     final upcoming = await MusicBrainzService.fetchUpcomingReleases();
     setState(() {
       _weekReleases = week;
+      _weekSingles = singles;
       _upcomingReleases = upcoming;
       _loading = false;
     });
@@ -47,6 +52,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      drawer: const SideMenu(),
       body: SafeArea(
         child: _loading
             ? const Center(
@@ -82,11 +88,17 @@ class _HomeScreenState extends State<HomeScreen> {
                     SectionHeader(
                       title: 'Lançamentos da semana',
                       screenW: screenW,
+                      toggleLabel: _showingSingles ? 'Singles' : 'Álbuns',
+                      onToggle: () {
+                        setState(() {
+                          _showingSingles = !_showingSingles;
+                        });
+                      },
                       onVerMais: () {},
                     ),
                     const SizedBox(height: 12),
                     AlbumCarousel(
-                      albums: _weekReleases,
+                      albums: _showingSingles ? _weekSingles : _weekReleases,
                       screenW: screenW,
                     ),
                     SizedBox(height: screenH * 0.025),

@@ -9,6 +9,7 @@ import '../widgets/home_screen/album_carousel.dart';
 import '../widgets/home_screen/placeholder_carousel.dart';
 import '../widgets/home_screen/placeholder_list.dart';
 import '../widgets/home_screen/side_menu.dart';
+import '../widgets/home_screen/bottom_navbar.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -23,6 +24,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Album> _upcomingReleases = [];
   bool _loading = true;
   bool _showingSingles = false;
+  int _currentIndex = 0;
 
   @override
   void initState() {
@@ -53,6 +55,13 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       drawer: const SideMenu(),
+      bottomNavigationBar: BottomNavBar( // ← adicione isso
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          setState(() => _currentIndex = index);
+          // TODO: navegar para as telas correspondentes
+        },
+      ),
       body: SafeArea(
         child: _loading
             ? const Center(

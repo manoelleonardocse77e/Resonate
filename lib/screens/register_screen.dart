@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../constants/colors.dart';
 import '../widgets/input_field.dart';
 import '../widgets/cta_button.dart';
@@ -96,19 +97,109 @@ class _TopSection extends StatelessWidget {
 
 // ─── Seção Inferior ───────────────────────────────────────────────────────────
 
-class _BottomSection extends StatelessWidget {
+class _BottomSection extends StatefulWidget {
   final double screenW;
   final double screenH;
   const _BottomSection({required this.screenW, required this.screenH});
 
   @override
+  State<_BottomSection> createState() => _BottomSectionState();
+}
+
+class _BottomSectionState extends State<_BottomSection> {
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmController = TextEditingController();
+  bool _loading = false;
+
+  @override
+  void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _usernameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmController.dispose();
+    super.dispose();
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  Future<void> _register() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    final confirmPassword = _confirmController.text;
+
+    if (email.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
+      _showMessage('Preencha email, senha e confirmação.');
+      return;
+    }
+
+    if (password != confirmPassword) {
+      _showMessage('As senhas não coincidem.');
+      return;
+    }
+
+    setState(() => _loading = true);
+
+    final userMetadata = <String, dynamic>{};
+    if (_usernameController.text.isNotEmpty) {
+      userMetadata['username'] = _usernameController.text.trim();
+    }
+    if (_firstNameController.text.isNotEmpty) {
+      userMetadata['first_name'] = _firstNameController.text.trim();
+    }
+    if (_lastNameController.text.isNotEmpty) {
+      userMetadata['last_name'] = _lastNameController.text.trim();
+    }
+
+    try {
+      final result = await Supabase.instance.client.auth.signUp(
+        email: email,
+        password: password,
+        data: userMetadata.isEmpty ? null : userMetadata,
+      );
+
+      if (!mounted) return;
+
+      if (result.user != null || result.session != null) {
+        if (result.session != null) {
+          Navigator.pushReplacementNamed(context, '/');
+          return;
+        }
+
+        _showMessage(
+          'Registro enviado. Verifique seu email para confirmar a conta.',
+        );
+        Navigator.pushReplacementNamed(context, '/login');
+        return;
+      }
+
+      _showMessage('Falha ao registrar. Verifique seus dados.');
+    } on AuthException catch (error) {
+      if (mounted) _showMessage(error.message);
+    } catch (error) {
+      if (mounted) _showMessage('Erro ao conectar com o Supabase: $error');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final fontScale = screenH / 800;
-    final inputSpacing = screenH * 0.015;
+    final fontScale = widget.screenH / 800;
+    final inputSpacing = widget.screenH * 0.015;
 
     return Container(
       color: AppColors.background,
-      padding: EdgeInsets.symmetric(horizontal: screenW * 0.09),
+      padding: EdgeInsets.symmetric(horizontal: widget.screenW * 0.09),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -123,7 +214,7 @@ class _BottomSection extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
           ),
-          SizedBox(height: screenH * 0.006),
+          SizedBox(height: widget.screenH * 0.006),
 
           // Subtítulo
           Text(
@@ -135,20 +226,22 @@ class _BottomSection extends StatelessWidget {
               fontWeight: FontWeight.w300,
             ),
           ),
-          SizedBox(height: screenH * 0.025),
+          SizedBox(height: widget.screenH * 0.025),
 
           // Nome e Sobrenome lado a lado
           Row(
             children: [
               Expanded(
                 child: _SmallInputField(
+                  controller: _firstNameController,
                   hint: 'Nome...',
                   fontScale: fontScale,
                 ),
               ),
-              SizedBox(width: screenW * 0.03),
+              SizedBox(width: widget.screenW * 0.03),
               Expanded(
                 child: _SmallInputField(
+                  controller: _lastNameController,
                   hint: 'Sobrenome...',
                   fontScale: fontScale,
                 ),
@@ -159,52 +252,54 @@ class _BottomSection extends StatelessWidget {
 
           // Usuário
           InputField(
+            controller: _usernameController,
             hint: 'Usuário...',
             icon: Icons.person_outline,
-            screenW: screenW,
+            screenW: widget.screenW,
             fontScale: fontScale,
           ),
           SizedBox(height: inputSpacing),
 
           // Email
           InputField(
+            controller: _emailController,
             hint: 'Email...',
             icon: Icons.email_outlined,
-            screenW: screenW,
+            screenW: widget.screenW,
             fontScale: fontScale,
           ),
           SizedBox(height: inputSpacing),
 
           // Senha
           InputField(
+            controller: _passwordController,
             hint: 'Senha...',
             icon: Icons.lock_outline,
             obscure: true,
-            screenW: screenW,
+            screenW: widget.screenW,
             fontScale: fontScale,
           ),
           SizedBox(height: inputSpacing),
 
           // Confirmar Senha
           InputField(
+            controller: _confirmController,
             hint: 'Confirmar Senha...',
             icon: Icons.lock_outline,
             obscure: true,
-            screenW: screenW,
+            screenW: widget.screenW,
             fontScale: fontScale,
           ),
-          SizedBox(height: screenH * 0.03),
+          SizedBox(height: widget.screenH * 0.03),
 
           // Botão
           CtaButton(
-            label: 'Registre-se',
-            screenW: screenW,
+            label: _loading ? 'Carregando...' : 'Registre-se',
+            screenW: widget.screenW,
             fontScale: fontScale,
-            onPressed: () {
-              // TODO: lógica de registro
-            },
+            onPressed: _loading ? () {} : _register,
           ),
-          SizedBox(height: screenH * 0.02),
+          SizedBox(height: widget.screenH * 0.02),
 
           // Já tem conta
           GestureDetector(
@@ -245,10 +340,12 @@ class _BottomSection extends StatelessWidget {
 // ─── Input Pequeno (Nome/Sobrenome) ───────────────────────────────────────────
 
 class _SmallInputField extends StatelessWidget {
+  final TextEditingController? controller;
   final String hint;
   final double fontScale;
 
   const _SmallInputField({
+    this.controller,
     required this.hint,
     required this.fontScale,
   });
@@ -264,6 +361,7 @@ class _SmallInputField extends StatelessWidget {
         ),
       ),
       child: TextField(
+        controller: controller,
         style: TextStyle(
           color: AppColors.white,
           fontSize: (14 * fontScale).clamp(11, 17),

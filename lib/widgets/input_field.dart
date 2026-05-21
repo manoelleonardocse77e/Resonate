@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../constants/colors.dart';
 
 class InputField extends StatelessWidget {
+  final TextEditingController? controller;
   final String hint;
   final IconData icon;
   final bool obscure;
@@ -9,6 +10,7 @@ class InputField extends StatelessWidget {
   final double fontScale;
 
   const InputField({
+    this.controller,
     required this.hint,
     required this.icon,
     required this.screenW,
@@ -29,6 +31,7 @@ class InputField extends StatelessWidget {
         ),
       ),
       child: TextField(
+        controller: controller,
         obscureText: obscure,
         style: TextStyle(
           color: AppColors.white,

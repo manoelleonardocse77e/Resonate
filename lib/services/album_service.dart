@@ -219,16 +219,16 @@ class AlbumService {
     String albumMbid, {
     bool ordenarPorNota = false,
   }) async {
-    var query = _supabase
+    final query = _supabase
         .from('review')
         .select('*, usuario(nickname, foto_url)')
         .eq('album_mbid', albumMbid);
 
-    query = ordenarPorNota
+    final orderedQuery = ordenarPorNota
         ? query.order('nota',       ascending: false)
         : query.order('created_at', ascending: false);
 
-    return await query;
+    return await orderedQuery;
   }
 
   // ── RF-05: Seguir / deixar de seguir ──────────────────────────────────────

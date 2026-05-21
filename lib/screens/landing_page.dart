@@ -1,184 +1,95 @@
 import 'package:flutter/material.dart';
+import '../constants/colors.dart';
+import '../widgets/feature_item.dart';
+import '../widgets/cta_button.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final screenW = mediaQuery.size.width;
+    final screenH = mediaQuery.size.height
+        - mediaQuery.padding.top
+        - mediaQuery.padding.bottom;
+
     return Scaffold(
-      body: SizedBox.expand(
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            _BackgroundImage(),
-            _DarkGradientOverlay(),
-            _AlbumCoverImage(),
-            _BottomContent(),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Background ──────────────────────────────────────────────────────────────
-
-class _BackgroundImage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      left: -328,
-      top: 0,
-      child: SizedBox(
-        width: 730,
-        height: 547,
-        child: Image.network(
-          'https://picsum.photos/730/547',
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) =>
-              Container(color: Colors.grey[800]),
-        ),
-      ),
-    );
-  }
-}
-
-class _DarkGradientOverlay extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      left: 0,
-      right: 0,
-      top: 469,
-      child: Container(
-        height: 405,
-        decoration: ShapeDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0x19787878),
-              Color(0xFF454545),
-              Color(0xFF121212),
+      backgroundColor: AppColors.background,
+      extendBody: true,
+      extendBodyBehindAppBar: true,
+      body: SafeArea(
+        top: false,
+        child: SizedBox(
+          width: screenW,
+          height: screenH,
+          child: Column(
+            children: [
+              Expanded(
+                flex: 55,
+                child: _TopSection(screenW: screenW),
+              ),
+              Expanded(
+                flex: 45,
+                child: _BottomSection(screenW: screenW, screenH: screenH),
+              ),
             ],
           ),
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(8),
-              topRight: Radius.circular(10),
-            ),
-          ),
-          shadows: const [
-            BoxShadow(
-              color: Color(0x4C000000),
-              blurRadius: 4,
-              offset: Offset(1, 1),
-            ),
-          ],
         ),
       ),
     );
   }
 }
 
-// ─── Album Cover ─────────────────────────────────────────────────────────────
+// ─── Seção Superior ───────────────────────────────────────────────────────────
 
-class _AlbumCoverImage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      left: 62,
-      top: 156,
-      child: SizedBox(
-        width: 277,
-        height: 415,
-        child: Image.network(
-          'https://picsum.photos/277/415',
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) =>
-              Container(color: Colors.grey[700]),
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Bottom Content ───────────────────────────────────────────────────────────
-
-class _BottomContent extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      left: 0,
-      top: 504,
-      right: 0,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 45),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _Headline(),
-            const SizedBox(height: 20),
-            _FeatureItem('Registre os albúms que você já escutou.'),
-            const SizedBox(height: 10),
-            _FeatureItem('Salve aqueles que você quer escutar depois.'),
-            const SizedBox(height: 10),
-            _FeatureItem('Conte para seus amigos o que você escuta de melhor.'),
-            const SizedBox(height: 36),
-            _CTAButton(),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Headline extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return const Text(
-      'Sua plataforma de conexão musical !',
-      textAlign: TextAlign.center,
-      style: TextStyle(
-        color: Colors.white,
-        fontSize: 24,
-        fontFamily: 'BebasNeue',
-        fontWeight: FontWeight.w400,
-      ),
-    );
-  }
-}
-
-class _FeatureItem extends StatelessWidget {
-  final String text;
-
-  const _FeatureItem(this.text);
+class _TopSection extends StatelessWidget {
+  final double screenW;
+  const _TopSection({required this.screenW});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Stack(
+      fit: StackFit.expand,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 4),
+        Image.asset(
+          'assets/images/image 1.png',
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Container(color: Colors.grey[800]),
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
           child: Container(
-            width: 11,
-            height: 11,
-            decoration: const ShapeDecoration(
-              color: Color(0xFFD9D9D9),
-              shape: OvalBorder(),
+            height: 20,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.transparent,
+                  AppColors.background,
+                ],
+              ),
             ),
           ),
         ),
-        const SizedBox(width: 15),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontFamily: 'Roboto',
-              fontWeight: FontWeight.w700,
+        Positioned(
+          top: 320,
+          bottom: 0,
+          left: 0,
+          right: 0,
+          child: Center(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.asset(
+                'assets/images/image 2.png',
+                width: screenW * 0.60,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) =>
+                    Container(color: Colors.grey[700]),
+              ),
             ),
           ),
         ),
@@ -187,33 +98,63 @@ class _FeatureItem extends StatelessWidget {
   }
 }
 
-class _CTAButton extends StatelessWidget {
+// ─── Seção Inferior ───────────────────────────────────────────────────────────
+
+class _BottomSection extends StatelessWidget {
+  final double screenW;
+  final double screenH;
+  const _BottomSection({required this.screenW, required this.screenH});
+
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: SizedBox(
-        width: 196,
-        height: 43,
-        child: ElevatedButton(
-          onPressed: () {
-            // TODO: navegar para tela de cadastro
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF501DE4),
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(5),
-            ),
-          ),
-          child: const Text(
-            'Começe agora - É gratis !',
+    final fontScale = screenH / 800;
+
+    return Container(
+      color: AppColors.background,
+      padding: EdgeInsets.only(
+        left: screenW * 0.09,
+        right: screenW * 0.09,
+        bottom: screenH * 0.06,
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Sua plataforma de conexão musical !',
+            textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 14,
-              fontFamily: 'Roboto',
-              fontWeight: FontWeight.w700,
+              color: AppColors.white,
+              fontSize: (22 * fontScale).clamp(16, 28),
+              fontFamily: 'BebasNeue',
+              fontWeight: FontWeight.w400,
             ),
           ),
-        ),
+          SizedBox(height: screenH * 0.03),
+          FeatureItem(
+            'Registre os álbuns que você já escutou.',
+            fontScale: fontScale,
+          ),
+          SizedBox(height: screenH * 0.02),
+          FeatureItem(
+            'Salve aqueles que você quer escutar depois.',
+            fontScale: fontScale,
+          ),
+          SizedBox(height: screenH * 0.02),
+          FeatureItem(
+            'Conte para seus amigos o que você escuta de melhor.',
+            fontScale: fontScale,
+          ),
+          SizedBox(height: screenH * 0.035),
+          CtaButton(
+            label: 'Começe agora - É gratis !',
+            screenW: screenW,
+            fontScale: fontScale,
+            onPressed: () {
+              Navigator.pushNamed(context, '/login');
+            },
+          ),
+        ],
       ),
     );
   }

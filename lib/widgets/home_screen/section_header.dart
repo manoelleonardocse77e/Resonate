@@ -61,6 +61,7 @@ class SectionHeader extends StatelessWidget {
                     ],
                   ),
                 ),
+
               // Ver mais
               GestureDetector(
                 onTap: onVerMais,

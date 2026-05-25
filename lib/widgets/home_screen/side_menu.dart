@@ -1,8 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../constants/colors.dart';
 
-class SideMenu extends StatelessWidget {
+class SideMenu extends StatefulWidget {
   const SideMenu({super.key});
+
+  @override
+  State<SideMenu> createState() => _SideMenuState();
+}
+
+class _SideMenuState extends State<SideMenu> {
+  String _username = '';
+  String _firstName = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  void _loadUser() {
+    final user = Supabase.instance.client.auth.currentUser;
+    setState(() {
+      _username = user?.userMetadata?['username'] ?? '';
+      _firstName = user?.userMetadata?['first_name'] ?? 'Usuário';
+    });
+  }
+
+  Future<void> _logout() async {
+    await Supabase.instance.client.auth.signOut();
+    if (mounted) {
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/',
+        (route) => false,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,9 +75,9 @@ class SideMenu extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   // Nome
-                  const Text(
-                    'Jefersson',
-                    style: TextStyle(
+                  Text(
+                    _firstName,
+                    style: const TextStyle(
                       color: AppColors.white,
                       fontSize: 20,
                       fontFamily: 'Roboto',
@@ -52,22 +86,23 @@ class SideMenu extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   // Username
-                  Text(
-                    '@lins2',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.5),
-                      fontSize: 13,
-                      fontFamily: 'Akshar',
-                      fontWeight: FontWeight.w300,
+                  if (_username.isNotEmpty)
+                    Text(
+                      '@$_username',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.5),
+                        fontSize: 13,
+                        fontFamily: 'Akshar',
+                        fontWeight: FontWeight.w300,
+                      ),
                     ),
-                  ),
                   const SizedBox(height: 16),
                   // Seguidores e Seguindo
                   Row(
                     children: [
-                      _StatItem(value: '250', label: 'Seguidores'),
+                      _StatItem(value: '0', label: 'Seguidores'),
                       SizedBox(width: screenW * 0.06),
-                      _StatItem(value: '91', label: 'Seguindo'),
+                      _StatItem(value: '0', label: 'Seguindo'),
                     ],
                   ),
                 ],
@@ -117,11 +152,7 @@ class SideMenu extends StatelessWidget {
             _MenuItem(
               icon: Icons.logout_outlined,
               label: 'Sair',
-              onTap: () => Navigator.pushNamedAndRemoveUntil(
-                context,
-                '/',
-                (route) => false,
-              ),
+              onTap: _logout,
             ),
             const SizedBox(height: 16),
           ],
@@ -219,8 +250,7 @@ class _MenuItem extends StatelessWidget {
                     : Colors.white.withValues(alpha: 0.7),
                 fontSize: 15,
                 fontFamily: 'Roboto',
-                fontWeight:
-                    isActive ? FontWeight.w700 : FontWeight.w400,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
               ),
             ),
           ],

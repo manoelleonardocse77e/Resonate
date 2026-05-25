@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../constants/colors.dart';
 import '../widgets/input_field.dart';
 import '../widgets/cta_button.dart';
@@ -32,7 +33,7 @@ class LoginScreen extends StatelessWidget {
               ),
               Expanded(
                 flex: 52,
-                child: _BottomSection(screenW: screenW, screenH: screenH),
+                child: _LoginForm(screenW: screenW, screenH: screenH),
               ),
             ],
           ),
@@ -94,20 +95,81 @@ class _TopSection extends StatelessWidget {
   }
 }
 
-// ─── Seção Inferior ───────────────────────────────────────────────────────────
+// ─── Formulário de login ─────────────────────────────────────────────────────
 
-class _BottomSection extends StatelessWidget {
+class _LoginForm extends StatefulWidget {
   final double screenW;
   final double screenH;
-  const _BottomSection({required this.screenW, required this.screenH});
+
+  const _LoginForm({required this.screenW, required this.screenH});
+
+  @override
+  State<_LoginForm> createState() => _LoginFormState();
+}
+
+class _LoginFormState extends State<_LoginForm> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _loading = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  Future<void> _login() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (email.isEmpty || password.isEmpty) {
+      _showMessage('Preencha o email e a senha.');
+      return;
+    }
+
+    setState(() => _loading = true);
+
+    bool didLogin = false;
+    try {
+      final result = await Supabase.instance.client.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+
+      if (!mounted) return;
+
+      if (result.user != null || result.session != null) {
+        didLogin = true;
+      } else {
+        _showMessage('Falha ao fazer login. Verifique seus dados.');
+      }
+    } on AuthException catch (error) {
+      if (mounted) _showMessage(error.message);
+    } catch (_) {
+      if (mounted) _showMessage('Erro ao conectar com o Supabase.');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+
+    if (didLogin && mounted) {
+      Navigator.pushReplacementNamed(context, '/home');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final fontScale = screenH / 800;
+    final fontScale = widget.screenH / 800;
 
     return Container(
       color: AppColors.background,
-      padding: EdgeInsets.symmetric(horizontal: screenW * 0.09),
+      padding: EdgeInsets.symmetric(horizontal: widget.screenW * 0.09),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -121,7 +183,7 @@ class _BottomSection extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
           ),
-          SizedBox(height: screenH * 0.008),
+          SizedBox(height: widget.screenH * 0.008),
           Text(
             'Por favor, faça login para continuar',
             style: TextStyle(
@@ -131,22 +193,24 @@ class _BottomSection extends StatelessWidget {
               fontWeight: FontWeight.w300,
             ),
           ),
-          SizedBox(height: screenH * 0.03),
+          SizedBox(height: widget.screenH * 0.03),
           InputField(
+            controller: _emailController,
             hint: 'Email...',
             icon: Icons.email_outlined,
-            screenW: screenW,
+            screenW: widget.screenW,
             fontScale: fontScale,
           ),
-          SizedBox(height: screenH * 0.018),
+          SizedBox(height: widget.screenH * 0.018),
           InputField(
+            controller: _passwordController,
             hint: 'Senha...',
             icon: Icons.lock_outline,
             obscure: true,
-            screenW: screenW,
+            screenW: widget.screenW,
             fontScale: fontScale,
           ),
-          SizedBox(height: screenH * 0.018),
+          SizedBox(height: widget.screenH * 0.018),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -162,16 +226,14 @@ class _BottomSection extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: screenH * 0.03),
+          SizedBox(height: widget.screenH * 0.03),
           CtaButton(
-            label: 'LOGIN',
-            screenW: screenW,
+            label: _loading ? 'Carregando...' : 'LOGIN',
+            screenW: widget.screenW,
             fontScale: fontScale,
-            onPressed: () {
-              Navigator.pushNamed(context, '/home');
-            },
+            onPressed: _loading ? () {} : _login,
           ),
-          SizedBox(height: screenH * 0.025),
+          SizedBox(height: widget.screenH * 0.025),
           GestureDetector(
             onTap: () {
               Navigator.pushNamed(context, '/register');

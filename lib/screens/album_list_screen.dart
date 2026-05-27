@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/colors.dart';
 import '../models/album.dart';
+import '../screens/album_screen.dart';
 
 class AlbumListScreen extends StatefulWidget {
   final String title;
@@ -83,7 +84,7 @@ class _AlbumListScreenState extends State<AlbumListScreen> {
             )
           : Column(
               children: [
-                // ── Barra de pesquisa ──────────────────────────────
+                // ── Barra de pesquisa ──────────────────────
                 Padding(
                   padding: EdgeInsets.symmetric(
                     horizontal: screenW * 0.04,
@@ -121,9 +122,7 @@ class _AlbumListScreenState extends State<AlbumListScreen> {
                                   color: Colors.white54,
                                   size: 18,
                                 ),
-                                onPressed: () {
-                                  _searchController.clear();
-                                },
+                                onPressed: () => _searchController.clear(),
                               )
                             : null,
                         border: InputBorder.none,
@@ -134,9 +133,10 @@ class _AlbumListScreenState extends State<AlbumListScreen> {
                   ),
                 ),
 
-                // ── Contador de resultados ─────────────────────────
+                // ── Contador ───────────────────────────────
                 Padding(
-                  padding: EdgeInsets.symmetric(horizontal: screenW * 0.04),
+                  padding:
+                      EdgeInsets.symmetric(horizontal: screenW * 0.04),
                   child: Row(
                     children: [
                       Text(
@@ -152,7 +152,7 @@ class _AlbumListScreenState extends State<AlbumListScreen> {
                 ),
                 const SizedBox(height: 8),
 
-                // ── Grid de álbuns ─────────────────────────────────
+                // ── Grid ───────────────────────────────────
                 Expanded(
                   child: _filtered.isEmpty
                       ? Center(
@@ -168,7 +168,8 @@ class _AlbumListScreenState extends State<AlbumListScreen> {
                               Text(
                                 'Nenhum resultado encontrado',
                                 style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.4),
+                                  color:
+                                      Colors.white.withValues(alpha: 0.4),
                                   fontFamily: 'Akshar',
                                   fontSize: 14,
                                 ),
@@ -187,7 +188,8 @@ class _AlbumListScreenState extends State<AlbumListScreen> {
                           ),
                           itemCount: _filtered.length,
                           itemBuilder: (context, index) {
-                            return _AlbumGridItem(album: _filtered[index]);
+                            return _AlbumGridItem(
+                                album: _filtered[index]);
                           },
                         ),
                 ),
@@ -206,50 +208,58 @@ class _AlbumGridItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: album.coverUrl != null
-                ? Image.network(
-                    album.coverUrl!,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _PlaceholderCover(),
-                    loadingBuilder: (_, child, progress) {
-                      if (progress == null) return child;
-                      return _PlaceholderCover();
-                    },
-                  )
-                : _PlaceholderCover(),
-          ),
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AlbumScreen(album: album),
         ),
-        const SizedBox(height: 4),
-        Text(
-          album.title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: AppColors.white,
-            fontSize: 10,
-            fontFamily: 'Roboto',
-            fontWeight: FontWeight.w700,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: album.coverUrl != null
+                  ? Image.network(
+                      album.coverUrl!,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _PlaceholderCover(),
+                      loadingBuilder: (_, child, progress) {
+                        if (progress == null) return child;
+                        return _PlaceholderCover();
+                      },
+                    )
+                  : _PlaceholderCover(),
+            ),
           ),
-        ),
-        Text(
-          album.artist,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.5),
-            fontSize: 9,
-            fontFamily: 'Akshar',
-            fontWeight: FontWeight.w300,
+          const SizedBox(height: 4),
+          Text(
+            album.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: AppColors.white,
+              fontSize: 10,
+              fontFamily: 'Roboto',
+              fontWeight: FontWeight.w700,
+            ),
           ),
-        ),
-      ],
+          Text(
+            album.artist,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.5),
+              fontSize: 9,
+              fontFamily: 'Akshar',
+              fontWeight: FontWeight.w300,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

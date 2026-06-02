@@ -4,6 +4,17 @@ import 'constants/supabase.dart';
 import 'screens/landing_page.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
+import 'screens/home_screen.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await dotenv.load(fileName: '.env');
+
+  await Supabase.initialize(
+    url: SupabaseConfig.url,         // ← usando seu constants
+    anonKey: SupabaseConfig.anonKey, // ← usando seu constants
+  );
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,13 +32,14 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Meu App',
+      title: 'Resonate',
       debugShowCheckedModeBanner: false,
       initialRoute: '/',
       routes: {
         '/': (context) => const WelcomeScreen(),
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
+        '/home': (context) => const HomeScreen(),
       },
     );
   }

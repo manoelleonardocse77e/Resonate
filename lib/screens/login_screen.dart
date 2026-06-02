@@ -159,7 +159,7 @@ class _LoginFormState extends State<_LoginForm> {
     }
 
     if (didLogin && mounted) {
-      Navigator.pushReplacementNamed(context, '/home');
+      Navigator.pushReplacementNamed(context, '/');
     }
   }
 

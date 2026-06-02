@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'constants/supabase.dart';
 import 'screens/landing_page.dart';
 import 'screens/login_screen.dart';
@@ -15,6 +14,13 @@ void main() async {
   await Supabase.initialize(
     url: SupabaseConfig.url,         // ← usando seu constants
     anonKey: SupabaseConfig.anonKey, // ← usando seu constants
+  );
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Supabase.initialize(
+    url: SupabaseConfig.url,
+    anonKey: SupabaseConfig.anonKey,
   );
 
   runApp(const MyApp());

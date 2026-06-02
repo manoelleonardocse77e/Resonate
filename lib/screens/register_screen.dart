@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../constants/colors.dart';
 import '../widgets/input_field.dart';
@@ -171,7 +171,7 @@ class _BottomSectionState extends State<_BottomSection> {
 
       if (result.user != null || result.session != null) {
         if (result.session != null) {
-          Navigator.pushReplacementNamed(context, '/home');
+          Navigator.pushReplacementNamed(context, '/');
           return;
         }
 

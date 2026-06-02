@@ -1,331 +1,400 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import '../models/album.dart';
-import '../models/track.dart';
-import '../models/credit.dart';
+// lib/services/album_service.dart
+// Serviço Flutter — toda a lógica fica na Edge Function.
+// Fontes externas: MusicBrainz, Cover Art Archive, iTunes, Wikimedia.
+// O Flutter só chama um endpoint e recebe os dados prontos.
+//
+// Dependências no pubspec.yaml:
+//   supabase_flutter: ^2.0.0
+
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+// ─── Modelos ──────────────────────────────────────────────────────────────────
+
+class Album {
+  final String albumMbid;
+  final String titulo;
+  final String? coverUrl;      // Cover Art Archive → iTunes (fallback)
+  final String? lancamento;
+  final String? gravadora;
+  final List<String> generos;  // MusicBrainz + iTunes
+  final String? pais;
+  final String? idioma;
+  final String artistaMbid;
+  final String artistaNome;
+  final String? artistaFoto;   // Wikimedia/Wikidata
+  final double? notaMedia;
+  final int totalReviews;
+
+  const Album({
+    required this.albumMbid,
+    required this.titulo,
+    this.coverUrl,
+    this.lancamento,
+    this.gravadora,
+    required this.generos,
+    this.pais,
+    this.idioma,
+    required this.artistaMbid,
+    required this.artistaNome,
+    this.artistaFoto,
+    this.notaMedia,
+    required this.totalReviews,
+  });
+
+  factory Album.fromJson(Map<String, dynamic> json) => Album(
+        albumMbid:    json['album_mbid']    as String,
+        titulo:       json['titulo']         as String,
+        coverUrl:     json['cover_url']      as String?,
+        lancamento:   json['lancamento']     as String?,
+        gravadora:    json['gravadora']      as String?,
+        generos:      List<String>.from(json['generos'] as List? ?? []),
+        pais:         json['pais']           as String?,
+        idioma:       json['idioma']         as String?,
+        artistaMbid:  json['artista_mbid']   as String,
+        artistaNome:  json['artista_nome']   as String,
+        artistaFoto:  json['artista_foto']   as String?,
+        notaMedia:    (json['nota_media']    as num?)?.toDouble(),
+        totalReviews: (json['total_reviews'] as num?)?.toInt() ?? 0,
+      );
+}
+
+class AlbumStats {
+  final String albumMbid;
+  final String titulo;
+  final String? coverUrl;
+  final String? lancamento;
+  final String? gravadora;
+  final List<String> generos;
+  final String? pais;
+  final String? idioma;
+  final String artistaMbid;
+  final String artistaNome;
+  final String? artistaFoto;
+  final int totalReviews;
+  final double? notaMedia;
+
+  const AlbumStats({
+    required this.albumMbid,
+    required this.titulo,
+    this.coverUrl,
+    this.lancamento,
+    this.gravadora,
+    required this.generos,
+    this.pais,
+    this.idioma,
+    required this.artistaMbid,
+    required this.artistaNome,
+    this.artistaFoto,
+    required this.totalReviews,
+    this.notaMedia,
+  });
+
+  factory AlbumStats.fromJson(Map<String, dynamic> json) => AlbumStats(
+        albumMbid:    json['album_mbid']    as String,
+        titulo:       json['titulo']         as String,
+        coverUrl:     json['cover_url']      as String?,
+        lancamento:   json['lancamento']     as String?,
+        gravadora:    json['gravadora']      as String?,
+        generos:      List<String>.from(json['generos'] as List? ?? []),
+        pais:         json['pais']           as String?,
+        idioma:       json['idioma']         as String?,
+        artistaMbid:  json['artista_mbid']   as String,
+        artistaNome:  json['artista_nome']   as String,
+        artistaFoto:  json['artista_foto']   as String?,
+        totalReviews: (json['total_reviews'] as num?)?.toInt() ?? 0,
+        notaMedia:    (json['nota_media']    as num?)?.toDouble(),
+      );
+}
+
+class Musica {
+  final String musicaMbid;
+  final String nome;
+  final int? posicao;
+  final int? duracaoMs;
+
+  const Musica({
+    required this.musicaMbid,
+    required this.nome,
+    this.posicao,
+    this.duracaoMs,
+  });
+
+  factory Musica.fromJson(Map<String, dynamic> json) => Musica(
+        musicaMbid: json['musica_mbid'] as String,
+        nome:       json['nome']        as String,
+        posicao:    json['posicao']     as int?,
+        duracaoMs:  json['duracao_ms']  as int?,
+      );
+
+  String get duracaoFormatada {
+    if (duracaoMs == null) return '--:--';
+    final total = duracaoMs! ~/ 1000;
+    final min   = total ~/ 60;
+    final seg   = total % 60;
+    return '$min:${seg.toString().padLeft(2, '0')}';
+  }
+}
+
+// ─── Serviço ──────────────────────────────────────────────────────────────────
 
 class AlbumService {
-  static const _mbBase = 'https://musicbrainz.org/ws/2';
-  static const _lfmBase = 'https://ws.audioscrobbler.com/2.0';
-  static const _mbHeaders = {
-    'User-Agent': 'ResonateApp/1.0 (contato@resonate.com)',
-    'Accept': 'application/json',
-  };
+  AlbumService._();
+  static final instance = AlbumService._();
 
-  // ─── Busca detalhes completos do álbum (MusicBrainz) ─────────────────────
+  final _supabase = Supabase.instance.client;
 
-  static Future<Map<String, dynamic>> fetchAlbumDetails(String mbid) async {
-    try {
-      final uri = Uri.parse(
-        '$_mbBase/release-group/$mbid'
-        '?inc=artists+releases+genres+tags'
-        '&fmt=json',
-      );
-      final response = await http.get(uri, headers: _mbHeaders);
-      if (response.statusCode != 200) return {};
-      return jsonDecode(response.body);
-    } catch (_) {
-      return {};
+  // ── RF-01: Busca álbuns ───────────────────────────────────────────────────
+  // Fluxo: cache Supabase → MusicBrainz + Cover Art Archive + iTunes + Wikimedia
+  Future<List<Album>> buscarAlbuns({
+    String? titulo,
+    String? artista,
+    String? gravadora,
+    String? ano,
+  }) async {
+    final response = await _supabase.functions.invoke(
+      'search-albums', // nome da Edge Function (com "s")
+      body: {
+        if (titulo    != null) 'titulo':    titulo,
+        if (artista   != null) 'artista':   artista,
+        if (gravadora != null) 'gravadora': gravadora,
+        if (ano       != null) 'ano':        ano,
+      },
+    );
+
+    if (response.status != 200) {
+      throw Exception('Erro na busca de álbuns: ${response.data}');
     }
+
+    final results = response.data['results'] as List? ?? [];
+    return results
+        .map((json) => Album.fromJson(json as Map<String, dynamic>))
+        .toList();
   }
 
-  // ─── Busca faixas do álbum (MusicBrainz) ─────────────────────────────────
+  // ── RF-02: Detalhes e estatísticas do álbum ───────────────────────────────
+  Future<AlbumStats?> buscarDetalhesAlbum(String albumMbid) async {
+    final data = await _supabase
+        .from('vw_album_stats')
+        .select()
+        .eq('album_mbid', albumMbid)
+        .maybeSingle();
 
-  static Future<List<Track>> fetchTracks(String mbid) async {
-    try {
-      // Busca o release principal do release-group
-      final groupUri = Uri.parse(
-        '$_mbBase/release-group/$mbid'
-        '?inc=releases'
-        '&fmt=json',
-      );
-      final groupResponse = await http.get(groupUri, headers: _mbHeaders);
-      if (groupResponse.statusCode != 200) return [];
-
-      final groupData = jsonDecode(groupResponse.body);
-      final releases = groupData['releases'] as List? ?? [];
-      if (releases.isEmpty) return [];
-
-      // Pega o primeiro release
-      final releaseId = releases.first['id'];
-
-      final releaseUri = Uri.parse(
-        '$_mbBase/release/$releaseId'
-        '?inc=recordings'
-        '&fmt=json',
-      );
-      final releaseResponse = await http.get(releaseUri, headers: _mbHeaders);
-      if (releaseResponse.statusCode != 200) return [];
-
-      final releaseData = jsonDecode(releaseResponse.body);
-      final media = releaseData['media'] as List? ?? [];
-      if (media.isEmpty) return [];
-
-      final tracks = <Track>[];
-      for (final medium in media) {
-        final trackList = medium['tracks'] as List? ?? [];
-        for (final t in trackList) {
-          final length = t['length'] as int? ?? 0;
-          final minutes = (length / 60000).floor();
-          final seconds = ((length % 60000) / 1000).floor();
-          tracks.add(Track(
-            number: t['position'] ?? tracks.length + 1,
-            title: t['title'] ?? '',
-            duration:
-                '$minutes:${seconds.toString().padLeft(2, '0')}',
-          ));
-        }
-      }
-      return tracks;
-    } catch (_) {
-      return [];
-    }
+    if (data == null) return null;
+    return AlbumStats.fromJson(data);
   }
 
-  // ─── Busca créditos do álbum (Last.fm) ───────────────────────────────────
+  // ── RF-02: Tracklist ──────────────────────────────────────────────────────
+  Future<List<Musica>> buscarTracklist(String albumMbid) async {
+    final data = await _supabase
+        .from('musica')
+        .select()
+        .eq('album_mbid', albumMbid)
+        .order('posicao');
 
-  static Future<List<Credit>> fetchCredits(
-      String artist, String album, String apiKey) async {
-    try {
-      final uri = Uri.parse(
-        '$_lfmBase'
-        '?method=album.getinfo'
-        '&api_key=$apiKey'
-        '&artist=${Uri.encodeComponent(artist)}'
-        '&album=${Uri.encodeComponent(album)}'
-        '&format=json',
-      );
-      final response = await http.get(uri);
-      if (response.statusCode != 200) return [];
-
-      final data = jsonDecode(response.body);
-      final tags = data['album']?['tags']?['tag'] as List? ?? [];
-
-      // Last.fm não tem créditos diretos, retorna membros da banda via MusicBrainz
-      return [];
-    } catch (_) {
-      return [];
-    }
+    return data.map((json) => Musica.fromJson(json)).toList();
   }
 
-  // ─── Busca membros/créditos (MusicBrainz) ────────────────────────────────
+  // ── RF-03: Criar / editar review ──────────────────────────────────────────
+  Future<void> salvarReview({
+    required String albumMbid,
+    required double nota,
+    String? corpo,
+  }) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('Usuário não autenticado.');
 
-  static Future<List<Credit>> fetchArtistMembers(String artistMbid) async {
-    try {
-      final uri = Uri.parse(
-        '$_mbBase/artist/$artistMbid'
-        '?inc=artist-rels'
-        '&fmt=json',
-      );
-      final response = await http.get(uri, headers: _mbHeaders);
-      if (response.statusCode != 200) return [];
-
-      final data = jsonDecode(response.body);
-      final relations = data['relations'] as List? ?? [];
-
-      return relations
-          .where((r) =>
-              r['type'] == 'member of band' ||
-              r['type'] == 'performer' ||
-              r['type'] == 'instrument')
-          .map((r) {
-            final artist = r['artist'];
-            return Credit(
-              name: artist?['name'] ?? '',
-              role: r['type'] ?? '',
-              imageUrl: null, // Last.fm não fornece imagem por artista
-            );
-          })
-          .where((c) => c.name.isNotEmpty)
-          .toList();
-    } catch (_) {
-      return [];
-    }
+    await _supabase.from('review').upsert(
+      {
+        'id_usuario': userId,
+        'album_mbid': albumMbid,
+        'nota':       nota,
+        'corpo':      corpo,
+      },
+      onConflict: 'id_usuario,album_mbid',
+    );
   }
 
-  // ─── Busca álbuns parecidos (Last.fm) ────────────────────────────────────
+  // ── RF-04: Reviews de um álbum ────────────────────────────────────────────
+  Future<List<Map<String, dynamic>>> buscarReviewsAlbum(
+    String albumMbid, {
+    bool ordenarPorNota = false,
+  }) async {
+    final query = _supabase
+        .from('review')
+        .select('*, usuario(nickname, foto_url)')
+        .eq('album_mbid', albumMbid);
 
-  static Future<List<Album>> fetchSimilarAlbums(
-      String artist, String apiKey) async {
-    try {
-      // Busca artistas similares
-      final uri = Uri.parse(
-        '$_lfmBase'
-        '?method=artist.getsimilar'
-        '&artist=${Uri.encodeComponent(artist)}'
-        '&api_key=$apiKey'
-        '&limit=6'
-        '&format=json',
-      );
-      final response = await http.get(uri);
-      if (response.statusCode != 200) return [];
+    final orderedQuery = ordenarPorNota
+        ? query.order('nota',       ascending: false)
+        : query.order('created_at', ascending: false);
 
-      final data = jsonDecode(response.body);
-      final artists = data['similarartists']?['artist'] as List? ?? [];
-
-      // Para cada artista similar busca o top álbum no MusicBrainz
-      final albums = await Future.wait(
-        artists.take(6).map((a) => _fetchTopAlbumByArtist(a['name'] ?? '')),
-      );
-
-      return albums.whereType<Album>().toList();
-    } catch (_) {
-      return [];
-    }
+    return await orderedQuery;
   }
 
-  static Future<Album?> _fetchTopAlbumByArtist(String artist) async {
-    try {
-      final uri = Uri.parse(
-        '$_mbBase/release-group'
-        '?query=artist:${Uri.encodeComponent(artist)} AND primarytype:Album'
-        '&limit=1'
-        '&fmt=json',
-      );
-      final response = await http.get(uri, headers: _mbHeaders);
-      if (response.statusCode != 200) return null;
+  // ── RF-05: Seguir / deixar de seguir ──────────────────────────────────────
+  Future<void> seguirUsuario(String seguidoId) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('Usuário não autenticado.');
 
-      final data = jsonDecode(response.body);
-      final groups = data['release-groups'] as List? ?? [];
-      if (groups.isEmpty) return null;
-
-      final g = groups.first;
-      final artistName = (g['artist-credit'] as List?)
-              ?.map((a) => a['name'] ?? '')
-              .join(', ') ??
-          artist;
-
-      return Album(
-        id: g['id'] ?? '',
-        title: g['title'] ?? '',
-        artist: artistName,
-        coverUrl:
-            'https://coverartarchive.org/release-group/${g['id']}/front-250',
-      );
-    } catch (_) {
-      return null;
-    }
+    await _supabase.from('seguidor').insert({
+      'seguidor_id': userId,
+      'seguido_id':  seguidoId,
+    });
   }
 
-  // ─── Busca gêneros do álbum (MusicBrainz) ────────────────────────────────
+  Future<void> deixarDeSeguir(String seguidoId) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('Usuário não autenticado.');
 
-  static Future<List<String>> fetchGenres(String mbid) async {
-    try {
-      final uri = Uri.parse(
-        '$_mbBase/release-group/$mbid'
-        '?inc=genres+tags'
-        '&fmt=json',
-      );
-      final response = await http.get(uri, headers: _mbHeaders);
-      if (response.statusCode != 200) return [];
-
-      final data = jsonDecode(response.body);
-      final genres = data['genres'] as List? ?? [];
-      final tags = data['tags'] as List? ?? [];
-
-      final allGenres = [
-        ...genres.map((g) => g['name'] as String? ?? ''),
-        ...tags.map((t) => t['name'] as String? ?? ''),
-      ].where((g) => g.isNotEmpty).toSet().toList();
-
-      return allGenres;
-    } catch (_) {
-      return [];
-    }
+    await _supabase
+        .from('seguidor')
+        .delete()
+        .eq('seguidor_id', userId)
+        .eq('seguido_id',  seguidoId);
   }
 
-  // ─── Busca imagem do artista (Last.fm) ───────────────────────────────────────
+  // ── RF-06: Feed social ────────────────────────────────────────────────────
+  Future<List<Map<String, dynamic>>> buscarFeed() async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('Usuário não autenticado.');
 
-  static Future<String?> fetchArtistImage(String artist, String apiKey) async {
-    try {
-      final uri = Uri.parse(
-        '$_lfmBase'
-        '?method=artist.getinfo'
-        '&artist=${Uri.encodeComponent(artist)}'
-        '&api_key=$apiKey'
-        '&format=json',
-      );
-      final response = await http.get(uri);
-      if (response.statusCode != 200) return null;
+    final seguidos = await _supabase
+        .from('seguidor')
+        .select('seguido_id')
+        .eq('seguidor_id', userId);
 
-      final data = jsonDecode(response.body);
-      final images = data['artist']?['image'] as List? ?? [];
+    if (seguidos.isEmpty) return [];
 
-      // Pega a maior imagem disponível
-      final large = images.lastWhere(
-        (img) => img['size'] == 'extralarge' || img['size'] == 'large',
-        orElse: () => images.isNotEmpty ? images.last : null,
-      );
+    final seguidosIds =
+        seguidos.map((s) => s['seguido_id'] as String).toList();
 
-      final url = large?['#text'] as String? ?? '';
-      return url.isNotEmpty ? url : null;
-    } catch (_) {
-      return null;
-    }
-  }
-  
-  // ─── Busca descrição do álbum (Last.fm) ───────────────────────────────────────
-
-  static Future<String?> fetchAlbumDescription(String artist, String album, String apiKey) async {
-    try {
-      final uri = Uri.parse(
-        '$_lfmBase'
-        '?method=album.getinfo'
-        '&api_key=$apiKey'
-        '&artist=${Uri.encodeComponent(artist)}'
-        '&album=${Uri.encodeComponent(album)}'
-        '&format=json',
-      );
-      final response = await http.get(uri);
-      if (response.statusCode != 200) return null;
-
-      final data = jsonDecode(response.body);
-      final summary = data['album']?['wiki']?['summary'] as String? ?? '';
-      // Remove tags HTML
-      return summary.replaceAll(RegExp(r'<[^>]*>'), '').trim();
-    } catch (_) {
-      return null;
-    }
+    return await _supabase
+        .from('vw_feed_social')
+        .select()
+        .inFilter('id_usuario', seguidosIds)
+        .limit(50);
   }
 
-  // ─── Busca detalhes (estúdio, país, língua) ───────────────────────────────
+  // ── RF-07: Curtir / descurtir review ──────────────────────────────────────
+  Future<void> curtirReview(String idReview) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('Usuário não autenticado.');
 
-  static Future<Map<String, String>> fetchDetails(String mbid) async {
-    try {
-      final groupUri = Uri.parse(
-        '$_mbBase/release-group/$mbid'
-        '?inc=releases'
-        '&fmt=json',
-      );
-      final groupResponse = await http.get(groupUri, headers: _mbHeaders);
-      if (groupResponse.statusCode != 200) return {};
+    await _supabase.from('review_curtida').insert({
+      'id_review':  idReview,
+      'id_usuario': userId,
+    });
+  }
 
-      final groupData = jsonDecode(groupResponse.body);
-      final releases = groupData['releases'] as List? ?? [];
-      if (releases.isEmpty) return {};
+  Future<void> descurtirReview(String idReview) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('Usuário não autenticado.');
 
-      final releaseId = releases.first['id'];
-      final releaseUri = Uri.parse(
-        '$_mbBase/release/$releaseId'
-        '?inc=labels+artist-credits'
-        '&fmt=json',
-      );
-      final releaseResponse = await http.get(releaseUri, headers: _mbHeaders);
-      if (releaseResponse.statusCode != 200) return {};
+    await _supabase
+        .from('review_curtida')
+        .delete()
+        .eq('id_review',  idReview)
+        .eq('id_usuario', userId);
+  }
 
-      final data = jsonDecode(releaseResponse.body);
-      final labels = data['label-info'] as List? ?? [];
-      final label = labels.isNotEmpty
-          ? (labels.first['label']?['name'] ?? '')
-          : '';
+  // ── RF-07: Notificações ───────────────────────────────────────────────────
+  Future<List<Map<String, dynamic>>> buscarNotificacoes() async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('Usuário não autenticado.');
 
-      return {
-        'studio': label,
-        'country': data['country'] ?? '',
-        'language': data['text-representation']?['language'] ?? '',
-      };
-    } catch (_) {
-      return {};
-    }
+    return await _supabase
+        .from('notificacao')
+        .select()
+        .eq('id_usuario', userId)
+        .order('created_at', ascending: false)
+        .limit(50);
+  }
+
+  Future<void> marcarNotificacaoComoLida(String idNotificacao) async {
+    await _supabase
+        .from('notificacao')
+        .update({'lida': true})
+        .eq('id_notificacao', idNotificacao);
+  }
+
+  // ── RF-08 / RF-10: Listas ─────────────────────────────────────────────────
+  Future<List<Map<String, dynamic>>> buscarMinhasListas() async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('Usuário não autenticado.');
+
+    return await _supabase
+        .from('lista')
+        .select('*, lista_album(count)')
+        .eq('id_usuario', userId)
+        .order('created_at', ascending: false);
+  }
+
+  Future<void> criarLista({required String titulo, String? descricao}) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('Usuário não autenticado.');
+
+    await _supabase.from('lista').insert({
+      'id_usuario': userId,
+      'titulo':     titulo,
+      'descricao':  descricao,
+    });
+  }
+
+  Future<void> adicionarAlbumNaLista({
+    required String idLista,
+    required String albumMbid,
+    int posicao = 0,
+  }) async {
+    await _supabase.from('lista_album').upsert(
+      {'id_lista': idLista, 'album_mbid': albumMbid, 'posicao': posicao},
+      onConflict: 'id_lista,album_mbid',
+    );
+  }
+
+  Future<void> removerAlbumDaLista({
+    required String idLista,
+    required String albumMbid,
+  }) async {
+    await _supabase
+        .from('lista_album')
+        .delete()
+        .eq('id_lista',   idLista)
+        .eq('album_mbid', albumMbid);
+  }
+
+  // ── RF-09: Perfil com estatísticas ───────────────────────────────────────
+  Future<Map<String, dynamic>?> buscarPerfil(String userId) async {
+    return await _supabase
+        .from('vw_usuario_perfil')
+        .select()
+        .eq('id_usuario', userId)
+        .maybeSingle();
+  }
+
+  // ── Realtime: notificações em tempo real ──────────────────────────────────
+  //
+  // Uso na widget:
+  //   final channel = AlbumService.instance.escutarNotificacoes((p) {
+  //     setState(() { /* atualiza badge */ });
+  //   });
+  //   // no dispose: channel.unsubscribe();
+  RealtimeChannel escutarNotificacoes(void Function(Map payload) onNew) {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('Usuário não autenticado.');
+
+    return _supabase
+        .channel('notificacoes-$userId')
+        .onPostgresChanges(
+          event:  PostgresChangeEvent.insert,
+          schema: 'public',
+          table:  'notificacao',
+          filter: PostgresChangeFilter(
+            type:   PostgresChangeFilterType.eq,
+            column: 'id_usuario',
+            value:  userId,
+          ),
+          callback: (payload) => onNew(payload.newRecord),
+        )
+        .subscribe();
   }
 }

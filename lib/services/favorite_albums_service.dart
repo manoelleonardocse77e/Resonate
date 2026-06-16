@@ -33,6 +33,7 @@ class FavoriteAlbumsService {
       artist: a['artist'] ?? '',
       coverUrl: a['coverUrl'],
       releaseDate: a['releaseDate'],
+      artistMbid: '',
     )).toList();
   }
 

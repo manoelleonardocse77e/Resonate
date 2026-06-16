@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../constants/colors.dart';
 import '../widgets/home_screen/side_menu.dart';
+import '../widgets/home_screen/bottom_navbar.dart';
 import '../widgets/profile_screen/profile_header.dart';
 import '../widgets/profile_screen/profile_stats.dart';
 import '../widgets/profile_screen/profile_favorite_albums.dart';
@@ -24,6 +25,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   String _name = '';
   String? _username;
+  int _currentIndex = 3; // ← perfil é o índice 3
 
   @override
   void initState() {
@@ -50,6 +52,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       backgroundColor: AppColors.background,
       extendBodyBehindAppBar: true,
       drawer: const SideMenu(),
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: _currentIndex,
+        onTap: (index) => setState(() => _currentIndex = index),
+      ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

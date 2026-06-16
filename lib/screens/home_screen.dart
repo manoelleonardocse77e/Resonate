@@ -86,15 +86,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-
       drawer: const SideMenu(),
-
       bottomNavigationBar: BottomNavBar(
         currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() => _currentIndex = index);
-
-        },
+        onTap: (index) => setState(() => _currentIndex = index),
+        // sem currentAlbum pois não estamos na AlbumScreen
       ),
 
       body: SafeArea(

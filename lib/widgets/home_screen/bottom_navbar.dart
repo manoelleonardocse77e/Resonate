@@ -1,15 +1,33 @@
 import 'package:flutter/material.dart';
 import '../../constants/colors.dart';
+import '../review/review_button_modal.dart';
+import '../../models/album.dart';
 
 class BottomNavBar extends StatelessWidget {
   final int currentIndex;
   final Function(int) onTap;
+  final Album? currentAlbum;
+  final String? artistMbid;
 
   const BottomNavBar({
     required this.currentIndex,
     required this.onTap,
+    this.currentAlbum,
+    this.artistMbid,
     super.key,
   });
+
+  void _openReviewModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ReviewButtonModal(
+        currentAlbum: currentAlbum,
+        artistMbid: artistMbid,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,16 +57,33 @@ class BottomNavBar extends StatelessWidget {
             currentIndex: currentIndex,
             onTap: (index) {
               onTap(index);
-              // TODO: navegar para explorar
             },
           ),
+
+          // ── Botão + central ──────────────────────────
+          GestureDetector(
+            onTap: () => _openReviewModal(context),
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: const Color(0xFF6C4EE4),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.add,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+          ),
+
           _NavItem(
             icon: Icons.notifications_outlined,
             index: 2,
             currentIndex: currentIndex,
             onTap: (index) {
               onTap(index);
-              // TODO: navegar para notificações
             },
           ),
           _NavItem(

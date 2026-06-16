@@ -98,9 +98,6 @@ class AlbumService {
       final response = await http.get(uri);
       if (response.statusCode != 200) return [];
 
-      final data = jsonDecode(response.body);
-      final tags = data['album']?['tags']?['tag'] as List? ?? [];
-
       // Last.fm não tem créditos diretos, retorna membros da banda via MusicBrainz
       return [];
     } catch (_) {
@@ -201,6 +198,7 @@ class AlbumService {
         artist: artistName,
         coverUrl:
             'https://coverartarchive.org/release-group/${g['id']}/front-250',
+        artistMbid: '',
       );
     } catch (_) {
       return null;

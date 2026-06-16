@@ -94,7 +94,6 @@ class _HomeScreenState extends State<HomeScreen> {
         onTap: (index) {
           setState(() => _currentIndex = index);
 
-          // TODO: navegar para as telas correspondentes
         },
       ),
 

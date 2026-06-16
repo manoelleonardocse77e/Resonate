@@ -345,7 +345,28 @@ class MusicBrainzService {
       return [];
     }
   }
+  
+  static Future<List<Album>> searchAlbums(String query) async {
+    try {
+      final uri = Uri.parse(
+        '$_baseUrl/release-group'
+        '?query=${Uri.encodeComponent(query)} AND primarytype:Album'
+        '&limit=20'
+        '&fmt=json',
+      );
 
+      final response = await http.get(uri, headers: _headers);
+      if (response.statusCode != 200) return [];
+
+      final data = jsonDecode(response.body);
+      final groups = data['release-groups'] as List? ?? [];
+
+      return groups.map((g) => _mapAlbum(g)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+  
   // ─────────────────────────────────────────────────────────────
   // Helpers
   // ─────────────────────────────────────────────────────────────

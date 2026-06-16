@@ -28,25 +28,37 @@ class BottomNavBar extends StatelessWidget {
             icon: Icons.home_outlined,
             index: 0,
             currentIndex: currentIndex,
-            onTap: onTap,
+            onTap: (index) {
+              onTap(index);
+              Navigator.pushReplacementNamed(context, '/home');
+            },
           ),
           _NavItem(
             icon: Icons.explore_outlined,
             index: 1,
             currentIndex: currentIndex,
-            onTap: onTap,
+            onTap: (index) {
+              onTap(index);
+              // TODO: navegar para explorar
+            },
           ),
           _NavItem(
             icon: Icons.notifications_outlined,
             index: 2,
             currentIndex: currentIndex,
-            onTap: onTap,
+            onTap: (index) {
+              onTap(index);
+              // TODO: navegar para notificações
+            },
           ),
           _NavItem(
             icon: Icons.person_outline,
             index: 3,
             currentIndex: currentIndex,
-            onTap: onTap,
+            onTap: (index) {
+              onTap(index);
+              Navigator.pushNamed(context, '/profile');
+            },
           ),
         ],
       ),
@@ -86,7 +98,6 @@ class _NavItem extends StatelessWidget {
             size: 26,
           ),
           const SizedBox(height: 6),
-          // Linha indicadora
           AnimatedContainer(
             duration: const Duration(milliseconds: 250),
             width: isActive ? 20 : 0,

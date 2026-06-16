@@ -9,6 +9,7 @@ import '../widgets/album_screen/album_header.dart';
 import '../widgets/album_screen/album_tabs.dart';
 import '../widgets/album_screen/analises_section.dart';
 import '../widgets/album_screen/parecidos_section.dart';
+import '../widgets/album_screen/review_sheet.dart';
 
 class AlbumScreen extends StatefulWidget {
   final Album album;
@@ -51,8 +52,7 @@ class _AlbumScreenState extends State<AlbumScreen> {
     ]);
 
     final albumDetails = results[3] as Map<String, dynamic>;
-    final artistCredit =
-        (albumDetails['artist-credit'] as List?)?.first;
+    final artistCredit = (albumDetails['artist-credit'] as List?)?.first;
     final artistMbid = artistCredit?['artist']?['id'] ?? '';
 
     List<Credit> credits = [];
@@ -73,6 +73,25 @@ class _AlbumScreenState extends State<AlbumScreen> {
     });
   }
 
+  void _abrirReview() {
+    
+    final artistCredit = (_albumDetails['artist-credit'] as List?)?.first;
+    final artistaMbid = artistCredit?['artist']?['id'] ?? '';
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ReviewSheet(
+        albumMbid: widget.album.id,
+        albumTitle: widget.album.title,
+        albumYear: widget.album.releaseDate?.substring(0, 4) ?? '',
+        albumArtUrl: widget.album.coverUrl,
+        albumArtist: widget.album.artist,
+        artista_mbid: artistaMbid,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -91,6 +110,27 @@ class _AlbumScreenState extends State<AlbumScreen> {
                     details: _albumDetails,
                     artistImageUrl: _artistImageUrl,
                     description: _description,
+                  ),
+
+                  // ── Botão de avaliação ────────────────────
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 4),
+                    child: OutlinedButton.icon(
+                      onPressed: _abrirReview,
+                      icon: const Icon(Icons.rate_review_outlined, size: 18),
+                      label: const Text('Avaliar álbum'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(
+                            color: Color(0xFF6C4EE4), width: 1),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 10),
+                        shape: const StadiumBorder(),
+                        textStyle: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w500),
+                      ),
+                    ),
                   ),
 
                   // ── Tabs ──────────────────────────────────

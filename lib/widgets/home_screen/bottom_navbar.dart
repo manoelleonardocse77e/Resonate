@@ -1,15 +1,33 @@
 import 'package:flutter/material.dart';
 import '../../constants/colors.dart';
+import '../review/review_button_modal.dart';
+import '../../models/album.dart';
 
 class BottomNavBar extends StatelessWidget {
   final int currentIndex;
   final Function(int) onTap;
+  final Album? currentAlbum;
+  final String? artistMbid;
 
   const BottomNavBar({
     required this.currentIndex,
     required this.onTap,
+    this.currentAlbum,
+    this.artistMbid,
     super.key,
   });
+
+  void _openReviewModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ReviewButtonModal(
+        currentAlbum: currentAlbum,
+        artistMbid: artistMbid,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,25 +46,54 @@ class BottomNavBar extends StatelessWidget {
             icon: Icons.home_outlined,
             index: 0,
             currentIndex: currentIndex,
-            onTap: onTap,
+            onTap: (index) {
+              onTap(index);
+              Navigator.pushReplacementNamed(context, '/home');
+            },
           ),
           _NavItem(
             icon: Icons.explore_outlined,
             index: 1,
             currentIndex: currentIndex,
-            onTap: onTap,
+            onTap: (index) {
+              onTap(index);
+            },
           ),
+
+          // ── Botão + central ──────────────────────────
+          GestureDetector(
+            onTap: () => _openReviewModal(context),
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: const Color(0xFF6C4EE4),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.add,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+          ),
+
           _NavItem(
             icon: Icons.notifications_outlined,
             index: 2,
             currentIndex: currentIndex,
-            onTap: onTap,
+            onTap: (index) {
+              onTap(index);
+            },
           ),
           _NavItem(
             icon: Icons.person_outline,
             index: 3,
             currentIndex: currentIndex,
-            onTap: onTap,
+            onTap: (index) {
+              onTap(index);
+              Navigator.pushNamed(context, '/profile');
+            },
           ),
         ],
       ),
@@ -86,7 +133,6 @@ class _NavItem extends StatelessWidget {
             size: 26,
           ),
           const SizedBox(height: 6),
-          // Linha indicadora
           AnimatedContainer(
             duration: const Duration(milliseconds: 250),
             width: isActive ? 20 : 0,

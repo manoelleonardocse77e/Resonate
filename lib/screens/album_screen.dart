@@ -29,6 +29,7 @@ class _AlbumScreenState extends State<AlbumScreen> {
   Map<String, dynamic> _albumDetails = {};
   String? _artistImageUrl;
   String? _description;
+  String _artistMbid = ''; // ← novo
   bool _loading = true;
 
   @override
@@ -69,6 +70,7 @@ class _AlbumScreenState extends State<AlbumScreen> {
       _artistImageUrl = results[5] as String?;
       _description = results[6] as String?;
       _credits = credits;
+      _artistMbid = artistMbid; // ← novo
       _loading = false;
     });
   }
@@ -96,6 +98,12 @@ class _AlbumScreenState extends State<AlbumScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: 0,
+        currentAlbum: widget.album,
+        artistMbid: _artistMbid,
+        onTap: (_) {},
+      ),
       body: _loading
           ? const Center(
               child: CircularProgressIndicator(color: AppColors.primary),

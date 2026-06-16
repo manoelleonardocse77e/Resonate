@@ -35,6 +35,7 @@ class MusicBrainzService {
         releaseDate: '2025-03-07',
         coverUrl:
             'https://coverartarchive.org/release-group/054c3793-9de7-46a0-b4d6-7469dd6c4f29/front-250',
+        artistMbid: '',      
       );
 
       final now = DateTime.now();
@@ -77,6 +78,7 @@ class MusicBrainzService {
           releaseDate: rawAlbums[i].releaseDate,
           coverUrl: rawAlbums[i].coverUrl,
           listeners: listenersResults[i],
+          artistMbid: '',
         );
       });
 
@@ -138,6 +140,7 @@ class MusicBrainzService {
           releaseDate: rawSingles[i].releaseDate,
           coverUrl: rawSingles[i].coverUrl,
           listeners: listenersResults[i],
+          artistMbid: '',
         );
       });
 
@@ -283,6 +286,7 @@ class MusicBrainzService {
           releaseDate: rawAlbums[i].releaseDate,
           coverUrl: rawAlbums[i].coverUrl,
           listeners: listenersResults[i],
+          artistMbid: '',
         );
       });
 
@@ -335,6 +339,7 @@ class MusicBrainzService {
           releaseDate: rawAlbums[i].releaseDate,
           coverUrl: rawAlbums[i].coverUrl,
           listeners: listenersResults[i],
+          artistMbid: '',
         );
       });
 
@@ -345,26 +350,55 @@ class MusicBrainzService {
       return [];
     }
   }
+  
+  static Future<List<Album>> searchAlbums(String query) async {
+    try {
+      final uri = Uri.parse(
+        '$_baseUrl/release-group'
+        '?query=${Uri.encodeComponent(query)} AND primarytype:Album'
+        '&limit=20'
+        '&fmt=json',
+      );
 
+      final response = await http.get(uri, headers: _headers);
+      if (response.statusCode != 200) return [];
+
+      final data = jsonDecode(response.body);
+      final groups = data['release-groups'] as List? ?? [];
+
+      return groups.map((g) => _mapAlbum(g)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+  
   // ─────────────────────────────────────────────────────────────
   // Helpers
   // ─────────────────────────────────────────────────────────────
 
   static Album _mapAlbum(dynamic g) {
-    final artist = (g['artist-credit'] as List?)
-            ?.map((a) => a['name'] ?? '')
-            .join(', ') ??
-        'Desconhecido';
+  final artistCredit = g['artist-credit'] as List? ?? [];
 
-    return Album(
-      id: g['id'] ?? '',
-      title: g['title'] ?? '',
-      artist: artist,
-      releaseDate: g['first-release-date'],
-      coverUrl:
-          'https://coverartarchive.org/release-group/${g['id']}/front-250',
-    );
+  final artist = artistCredit
+      .map((a) => a['name'] ?? '')
+      .join(', ');
+
+  String artistMbid = '';
+
+  if (artistCredit.isNotEmpty) {
+    artistMbid = artistCredit.first['artist']?['id'] ?? '';
   }
+
+  return Album(
+    id: g['id'] ?? '',
+    title: g['title'] ?? '',
+    artist: artist.isEmpty ? 'Desconhecido' : artist,
+    artistMbid: artistMbid,
+    releaseDate: g['first-release-date'],
+    coverUrl:
+        'https://coverartarchive.org/release-group/${g['id']}/front-250',
+  );
+}
 
   // Aceita apenas yyyy-mm-dd
   static bool _hasFullDate(String? date) {

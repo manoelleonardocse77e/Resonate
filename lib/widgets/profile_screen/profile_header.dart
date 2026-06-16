@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../constants/colors.dart';
 
-class ProfileHeader extends StatelessWidget {
+class ProfileHeader extends StatefulWidget {
   final String name;
   final String? username;
   final String? location;
@@ -22,6 +23,97 @@ class ProfileHeader extends StatelessWidget {
   });
 
   @override
+  State<ProfileHeader> createState() => _ProfileHeaderState();
+}
+
+class _ProfileHeaderState extends State<ProfileHeader> {
+  final _supabase = Supabase.instance.client;
+  late String _nickname;
+
+  @override
+  void initState() {
+    super.initState();
+    _nickname = widget.name;
+  }
+
+  Future<void> _editarNickname() async {
+    final controller = TextEditingController(text: _nickname);
+
+    final novoNome = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1C1C1C),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Editar nome',
+          style: TextStyle(color: Colors.white, fontSize: 16),
+        ),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: const TextStyle(color: Colors.white),
+          cursorColor: AppColors.primary,
+          decoration: InputDecoration(
+            hintText: 'Seu nome de perfil',
+            hintStyle: const TextStyle(color: Colors.white38),
+            filled: true,
+            fillColor: const Color(0xFF2A2A2A),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide:
+                  const BorderSide(color: AppColors.primary, width: 1),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancelar',
+                style: TextStyle(color: Colors.white.withOpacity(0.5))),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('Salvar',
+                style: TextStyle(
+                    color: AppColors.primary, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+
+    if (novoNome == null || novoNome.isEmpty || novoNome == _nickname) return;
+
+    try {
+      final userId = _supabase.auth.currentUser?.id;
+
+      await _supabase
+          .from('usuario')
+          .update({'nickname': novoNome})
+          .eq('id_usuario', userId as Object);
+
+      setState(() => _nickname = novoNome);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Nome atualizado com sucesso!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao atualizar: $e')),
+        );
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final screenH = MediaQuery.of(context).size.height;
 
@@ -34,9 +126,9 @@ class ProfileHeader extends StatelessWidget {
             fit: StackFit.expand,
             children: [
               // Fundo
-              artistImageUrl != null
+              widget.artistImageUrl != null
                   ? Image.network(
-                      artistImageUrl!,
+                      widget.artistImageUrl!,
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) =>
                           Container(color: Colors.grey[900]),
@@ -62,7 +154,7 @@ class ProfileHeader extends StatelessWidget {
               Positioned(
                 top: MediaQuery.of(context).padding.top + 8,
                 right: 12,
-                child: isOwnProfile
+                child: widget.isOwnProfile
                     ? IconButton(
                         icon: const Icon(
                           Icons.settings_outlined,
@@ -96,7 +188,7 @@ class ProfileHeader extends StatelessWidget {
               ),
 
               // Botão menu hamburguer (só no próprio perfil)
-              if (isOwnProfile)
+              if (widget.isOwnProfile)
                 Positioned(
                   top: MediaQuery.of(context).padding.top + 8,
                   left: 12,
@@ -140,15 +232,31 @@ class ProfileHeader extends StatelessWidget {
               ),
               const SizedBox(height: 8),
 
-              // Nome
-              Text(
-                name,
-                style: const TextStyle(
-                  color: AppColors.white,
-                  fontSize: 20,
-                  fontFamily: 'Roboto',
-                  fontWeight: FontWeight.w700,
-                ),
+              // Nome com botão de edição (só no próprio perfil)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    _nickname,
+                    style: const TextStyle(
+                      color: AppColors.white,
+                      fontSize: 20,
+                      fontFamily: 'Roboto',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  if (widget.isOwnProfile) ...[
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: _editarNickname,
+                      child: const Icon(
+                        Icons.edit_outlined,
+                        color: AppColors.primary,
+                        size: 16,
+                      ),
+                    ),
+                  ],
+                ],
               ),
               const SizedBox(height: 6),
 
@@ -157,20 +265,20 @@ class ProfileHeader extends StatelessWidget {
                 alignment: WrapAlignment.center,
                 spacing: 12,
                 children: [
-                  if (location != null)
+                  if (widget.location != null)
                     _InfoChip(
                       icon: Icons.location_on_outlined,
-                      label: location!,
+                      label: widget.location!,
                     ),
-                  if (letterboxd != null)
+                  if (widget.letterboxd != null)
                     _InfoChip(
                       icon: Icons.movie_outlined,
-                      label: letterboxd!,
+                      label: widget.letterboxd!,
                     ),
-                  if (instagram != null)
+                  if (widget.instagram != null)
                     _InfoChip(
                       icon: Icons.camera_alt_outlined,
-                      label: instagram!,
+                      label: widget.instagram!,
                     ),
                 ],
               ),
